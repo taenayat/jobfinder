@@ -6,7 +6,7 @@ from api_token import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from datetime import datetime
 import random
 
-from linkedin_v2 import LinkedIn
+from linkedin import LinkedIn
 from data_storage import DataStorage
 
 logging.basicConfig(
