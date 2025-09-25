@@ -2,21 +2,35 @@ import logging
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, JobQueue
-from api_token import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# from api_token import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from datetime import datetime
 import random
+import os
+from dotenv import load_dotenv
+import json
 
 from linkedin import LinkedIn
 from data_storage import DataStorage
 
+JOB_TIME_THRESHOLD = 900
+JOB_REPEAT_INTERVAL = JOB_TIME_THRESHOLD + int(random.uniform(-10, 20))
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+JOB_TITLE = "Data Scientist"
+LOCATION = "Berlin Metropolitan Area"
+
+# Configure logging with file handler
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler('telegramBot.log'),
+        logging.StreamHandler()
+    ]
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
-
-JOB_TIME_THRESHOLD = 900
-JOB_REPEAT_INTERVAL = JOB_TIME_THRESHOLD + int(random.uniform(-10, 20))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_html('Hi!')
@@ -31,28 +45,41 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def get_new_jobs(context: ContextTypes.DEFAULT_TYPE) -> None:
-    linkedin = LinkedIn('Data Scientist', 'Berlin Metropolitan Area', time_threshold=JOB_TIME_THRESHOLD)
-    storage = DataStorage()
-    storage.load_data()
+    linkedin = LinkedIn(JOB_TITLE, LOCATION, time_threshold=JOB_TIME_THRESHOLD)
+    logger.info('LinkedIn driver initialized')
+
+    storage = DataStorage(
+        use_csv=True,
+        use_google_sheets=True,
+        credentials_info=json.loads(os.getenv('GOOGLE_CREDENTIALS_JSON')),
+        spreadsheet_id=os.getenv('SPREADSHEET_ID'),
+        worksheet_name=os.getenv('WORKSHEET_NAME')
+    )
 
     jobs = linkedin.get_jobs()
     if len(jobs) != 0:
         for job in jobs:
-            message = f"{job['title']}\n{job['company']}\n{job['location']}\n{job['time_posted']}\n\n{job['link']}"
-            await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-            storage.add_job(
-                timestamp=datetime.now(),
-                job_title=job['title'],
-                company=job['company'],
-                location=job['location'],
-                link=job['link']
+            message = (
+                f"✨ <b>{job['title']}</b>\n"
+                f"🏢 <i>{job['company']}</i>\n"
+                f"📍 {job['location']}\n"
+                f"🕒 Posted: {job['time_posted']}\n"
+                f"\n🔗 <a href=\"{job['link']}\">View Job</a>"
             )
+            await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
+            
+            job_list = [
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                job['title'],
+                job['company'],
+                job['location'],
+                job['link']
+            ]
+            storage.save_job(job_list)
+            logger.info(f"Job saved: {job['title']} at {job['company']}")
+            
     linkedin.close_driver()
     logger.info('LinkedIn driver closed')
-    storage.save_data()
-    logger.info('Data saved to storage')
-
-
 
 
 def main() -> None:

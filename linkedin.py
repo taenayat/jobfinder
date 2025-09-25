@@ -7,17 +7,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.action_chains import ActionChains
-# from langdetect import detect, LangDetectException
 import time
 import random
 import os
 import re
 from urllib.parse import urlencode
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+FORBIDDEN_LIST = ["principal", "lead", "head", "staff", "manager",
+                    "frontend", "backend", "fullstack", "software", "cloud",
+                    "security", "java", "javascript", ".net", "legal", "android"]
 
 class LinkedIn:
     def __init__(self, job_title, location, time_threshold=3600):
@@ -34,14 +34,17 @@ class LinkedIn:
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        
+        # Set the Chrome binary location to use local Chrome installation
+        options.binary_location = "chrome-linux64/chrome"
 
-        driver_path = ChromeDriverManager().install()
-        driver_dir = os.path.dirname(driver_path)
-        actual_driver_path = os.path.join(driver_dir, "chromedriver")
-        if not os.path.exists(actual_driver_path):
-            actual_driver_path = driver_path
-        service = Service(executable_path=actual_driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
+        # driver_path = ChromeDriverManager().install()
+        # driver_dir = os.path.dirname(driver_path)
+        # actual_driver_path = os.path.join(driver_dir, "chromedriver")
+        # if not os.path.exists(actual_driver_path):
+        #     actual_driver_path = driver_path
+        # service = Service(executable_path=actual_driver_path)
+        driver = webdriver.Chrome(options=options)
         driver.maximize_window()
         logger.info('driver loaded successfully')
         return driver
@@ -57,7 +60,7 @@ class LinkedIn:
         params['f_TPR'] = f'r{self.time_threshold}'
         params['sortBy'] = 'DD' # or 'R'
 
-        print(f"{query}{urlencode(params)}")
+        logger.info(f"LinkedIn API query: {query}{urlencode(params)}")
         return f"{query}{urlencode(params)}"
 
     def get_jobs(self):
@@ -135,12 +138,8 @@ class LinkedIn:
             return True
 
     def filter_jobs_title(self, title):
-        forbidden_list = ["principal", "lead", "head", "manager",
-                          "frontend", "backend", "fullstack", "software", "cloud",
-                          "security", "java", "javascript", ".net", "legal"]
-        necessary_list = ["data"]
         title = title.lower()
-        for item in forbidden_list:
+        for item in FORBIDDEN_LIST:
             if item in title:
                 return False
         return True

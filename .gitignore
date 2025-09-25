@@ -1,4 +1,5 @@
 api_token.py
 steel-minutia-291021-e3f589b70e29.json
 chrome-linux64/
-
+venv/
+.env
