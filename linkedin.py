@@ -34,18 +34,17 @@ class LinkedIn:
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-images')
+        options.add_argument('--disable-javascript')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
         
-        # Set the Chrome binary location to use local Chrome installation
-        options.binary_location = "chrome-linux64/chrome"
-
-        # driver_path = ChromeDriverManager().install()
-        # driver_dir = os.path.dirname(driver_path)
-        # actual_driver_path = os.path.join(driver_dir, "chromedriver")
-        # if not os.path.exists(actual_driver_path):
-        #     actual_driver_path = driver_path
-        # service = Service(executable_path=actual_driver_path)
-        driver = webdriver.Chrome(options=options)
-        driver.maximize_window()
+        # Use ChromeDriverManager to automatically handle driver installation
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
         logger.info('driver loaded successfully')
         return driver
     

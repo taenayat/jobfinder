@@ -3,3 +3,8 @@ steel-minutia-291021-e3f589b70e29.json
 chrome-linux64/
 venv/
 .env
+*.csv
+*.log
+__pycache__/
+.dockerignore
+Dockerfile
